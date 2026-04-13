@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do Portfolio | Glassmorphism</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <main class="container glass-panel">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; text-align: left;">
+            <div>
+                <h1 style="margin-bottom:0;">My Tasks</h1>
+                <p>Welcome, {{ user.email.split('@')[0] }}</p>
+            </div>
+            <a href="{{ url_for('logout') }}" style="color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Logout</a>
+        </header>
+
+        <form id="todo-form">
+            <input type="text" id="task-input" placeholder="What needs to be done?" required autocomplete="off">
+            <button type="submit" id="add-btn">Add Task</button>
+        </form>
+
+        <ul id="task-list">
+            <!-- Tasks will be injected here by app.js -->
+        </ul>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
