@@ -23,7 +23,7 @@
                 <h1 style="margin-bottom:0;">My Tasks</h1>
                 <p>Welcome, {{ user.email.split('@')[0] }}</p>
             </div>
-            <a href="{{ url_for('logout') }}" style="color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Logout</a>
+            <a href="{{ url_for('auth.logout') }}" style="color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Logout</a>
         </header>
 
         <form id="todo-form">
@@ -36,6 +36,6 @@
         </ul>
     </main>
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/tasks.js') }}"></script>
 </body>
 </html>
