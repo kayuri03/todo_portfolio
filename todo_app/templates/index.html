@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Main Styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}?v=3.0">
 </head>
 <body>
     <div class="background-blobs">
@@ -45,18 +45,24 @@
                     <li data-filter="archived" style="margin-top: 20px; color: var(--text-muted);">📦 Archived Tasks</li>
                 </ul>
 
-                <!-- v0.6.0 Custom Lists -->
-                <div class="sidebar-lists-section" style="margin-top: 30px;">
-                    <div id="lists-header-toggle" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; color: var(--text-muted); padding: 5px 16px; margin-bottom: 5px;">
+                <!-- v0.7.1 Custom Lists Layout Refactor -->
+                <div class="sidebar-lists-section">
+                    <div id="lists-header-container" title="Toggle My Lists" style="display:flex; justify-content:space-between; align-items:center; color: var(--text-muted); padding: 5px 16px; margin-bottom: 5px; cursor: pointer; flex-shrink: 0;">
                         <span style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">My Lists</span>
-                        <span class="lists-toggle-icon" style="transition: transform 0.2s;">⮟</span>
+                        <div style="display:flex; gap: 12px; align-items:center;">
+                            <span id="trigger-add-list" style="font-weight:bold; font-size: 1.2rem; transition: color 0.2s; display: inline-block;" title="Create New List">+</span>
+                            <span id="lists-toggle-icon" style="transition: transform 0.2s;">⮟</span>
+                        </div>
                     </div>
-                    <div id="custom-lists-container" style="display:block;">
+                    
+                    <div id="add-list-container" style="display:none; padding: 0 16px; margin-bottom: 10px; gap: 4px; flex-shrink: 0;">
+                        <input type="text" id="new-list-input" placeholder="Type name..." autocomplete="off" style="flex: 1; border: none; background: rgba(0,0,0,0.2); color: white; font-size: 0.85rem; outline: none; border-radius: 6px; padding: 8px;">
+                        <button type="button" id="submit-list-btn" title="Add List" style="padding: 0 12px; border-radius: 6px; background: var(--accent); color: white; border: none; cursor: pointer; font-weight: bold; font-size: 0.9rem; display:none;">✓</button>
+                    </div>
+
+                    <div id="custom-lists-container">
                         <ul id="custom-lists-nav" style="list-style:none; display:flex; flex-direction:column; gap:2px;">
                         </ul>
-                        <form id="add-list-form" style="margin-top:10px; display:flex; padding: 0 16px;">
-                            <input type="text" id="new-list-input" placeholder="+ New List" autocomplete="off" required style="width: 100%; border: none; background: transparent; color: var(--text-main); font-size: 0.9rem; outline: none; border-bottom: 1px solid var(--glass-border); padding: 5px 0;">
-                        </form>
                     </div>
                 </div>
             </nav>
@@ -88,6 +94,6 @@
         </main>
     </div>
 
-    <script type="module" src="{{ url_for('static', filename='js/tasks.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/tasks.js') }}?v=3.0"></script>
 </body>
 </html>

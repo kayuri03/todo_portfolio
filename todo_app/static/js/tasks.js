@@ -1,4 +1,4 @@
-import { api } from './api.js';
+import { api } from './api.js?v=3.0';
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('todo-form');
@@ -13,10 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let customListsData = [];
 
     if(taskList && form) {
-        // v0.6.0 Load custom lists before loading tasks
         loadLists().then(() => loadTasks());
 
-        // Standard Filters Listener
         filterNavItems.forEach(item => {
             item.addEventListener('click', () => {
                 filterNavItems.forEach(nav => nav.classList.remove('active'));
@@ -28,16 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentListId = null;
                 viewTitle.innerText = item.innerText.split(' ')[1] ? item.innerText.split(/ (.+)/)[1] : item.innerText;
                 
-                if (currentFilter === 'archived') {
-                    form.style.display = 'none';
-                } else {
-                    form.style.display = 'flex';
-                }
+                form.style.display = currentFilter === 'archived' ? 'none' : 'flex';
                 loadTasks();
             });
         });
 
-        // Add task mapping to correct bucket
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = input.value.trim();
@@ -56,35 +49,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.value = '';
                 if(priorityInput) priorityInput.value = 'None';
                 if(dateInput) dateInput.value = '';
-            } catch (err) {
-                console.error('Error adding task:', err);
-            }
+            } catch (err) { console.error('Error adding task:', err); }
         });
 
-        // Custom Lists Add Form
-        const addListForm = document.getElementById('add-list-form');
-        if (addListForm) {
-            addListForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const listInput = document.getElementById('new-list-input');
+        // v0.7.2 UI ERADICATION AND REWRITE UX flow
+        const triggerAddList = document.getElementById('trigger-add-list');
+        const addListContainer = document.getElementById('add-list-container');
+        const listInput = document.getElementById('new-list-input');
+        const submitListBtn = document.getElementById('submit-list-btn');
+
+        if (triggerAddList && addListContainer) {
+            triggerAddList.addEventListener('click', (e) => {
+                e.stopPropagation(); // VERY CRITICAL logic shielding parent click execution!
+                const isHidden = addListContainer.style.display === 'none';
+                addListContainer.style.display = isHidden ? 'flex' : 'none';
+                
+                // Immediately highlight input box for spam adding
+                if(isHidden) listInput.focus();
+            });
+            
+            listInput.addEventListener('input', (e) => {
+                submitListBtn.style.display = e.target.value.trim().length > 0 ? 'block' : 'none';
+            });
+            
+            const processListAdd = async () => {
                 const val = listInput.value.trim();
                 if(!val) return;
+                
+                // Disable button momentarily to prevent duplicate submit fetches!
+                submitListBtn.disabled = true;
+                listInput.disabled = true;
+                
                 try {
-                    await api.addList(val);
+                    const res = await api.addList(val);
+                    if (res.error) {
+                        alert(res.error);
+                        submitListBtn.disabled = false;
+                        listInput.disabled = false;
+                        return;
+                    }
+                    // Flash inputs naturally
                     listInput.value = '';
+                    submitListBtn.style.display = 'none';
+                    submitListBtn.disabled = false;
+                    listInput.disabled = false;
+                    
+                    // Maintain logic state looping
+                    listInput.focus();
                     await loadLists();
-                } catch(e) { console.error(e); }
+                    loadTasks(); // Indestructible Dropdown UI sync
+                } catch(err) { 
+                    console.error('List creation error', err); 
+                    alert("Error adding list. Ensure you are under the 10-list boundary.");
+                    submitListBtn.disabled = false;
+                    listInput.disabled = false;
+                }
+            };
+
+            // Bulletproof Mouse Bindings
+            submitListBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                await processListAdd();
+            });
+
+            // Bulletproof Keyboard Bindings
+            listInput.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    await processListAdd();
+                }
             });
         }
 
-        // Custom Lists Accordion
-        const listsHeaderToggle = document.getElementById('lists-header-toggle');
+        // Accordion specific structural isolated handlers
+        const listsHeaderContainer = document.getElementById('lists-header-container');
         const customListsContainer = document.getElementById('custom-lists-container');
-        if (listsHeaderToggle && customListsContainer) {
-            listsHeaderToggle.addEventListener('click', () => {
+        const listsToggleIcon = document.getElementById('lists-toggle-icon');
+        
+        if (listsHeaderContainer && customListsContainer) {
+            listsHeaderContainer.addEventListener('click', () => {
                 const isHidden = customListsContainer.style.display === 'none';
                 customListsContainer.style.display = isHidden ? 'block' : 'none';
-                listsHeaderToggle.querySelector('.lists-toggle-icon').style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+                
+                // Safely rotate child icon without rotating parents
+                if (listsToggleIcon) listsToggleIcon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+                
+                // If closing, hide the form to prevent GUI layout hanging logic issues
+                if (!isHidden && addListContainer) { addListContainer.style.display = 'none'; }
             });
         }
     }
@@ -93,15 +145,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (avatarUpload) {
         avatarUpload.addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
-                const file = e.target.files[0];
                 try {
-                    const data = await api.uploadAvatar(file);
-                    if (data.success) {
-                        window.location.reload();
-                    }
-                } catch(err) {
-                    console.error('Upload failed', err);
-                }
+                    const data = await api.uploadAvatar(e.target.files[0]);
+                    if (data.success) { window.location.reload(); }
+                } catch(err) { console.error('Upload', err); }
             }
         });
     }
@@ -112,34 +159,164 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             customListsData = await api.fetchLists();
             listsNav.innerHTML = '';
+            
+            // Limit Validation Logic hook!
+            const triggerAddListBtn = document.getElementById('trigger-add-list');
+            const addListContNode = document.getElementById('add-list-container');
+            if (triggerAddListBtn) {
+                if (customListsData.length >= 10) {
+                    triggerAddListBtn.style.display = 'none';
+                    if (addListContNode) addListContNode.style.display = 'none';
+                } else {
+                    triggerAddListBtn.style.display = 'inline-block';
+                }
+            }
+            
             customListsData.forEach(list => {
                 const li = document.createElement('li');
+                li.className = 'list-item-container';
                 li.dataset.filter = 'list';
                 li.dataset.listId = list.id;
-                li.innerText = escapeHTML(list.name);
                 
-                // Maintain active UX if we re-render while currently sitting inside a list filter
+                li.innerHTML = `
+                    <span class="list-title" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(list.name)}</span>
+                    <div class="list-actions">
+                        <button class="list-action-btn list-edit-btn" title="Rename List">✏️</button>
+                        <button class="list-action-btn list-delete-btn" title="Delete List">🗑️</button>
+                    </div>
+                `;
+                
                 if (currentFilter === 'list' && currentListId === list.id) {
                     li.classList.add('active');
                 }
                 
-                li.addEventListener('click', () => {
+                const titleSpan = li.querySelector('.list-title');
+                const editBtn = li.querySelector('.list-edit-btn');
+
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const currentTitle = titleSpan.innerText;
+                    li.innerHTML = `<input type="text" class="list-edit-input" value="${escapeHTML(currentTitle)}" />`;
+                    const input = li.querySelector('.list-edit-input');
+                    input.focus();
+                    
+                    const finishEdit = async () => {
+                        const newName = input.value.trim();
+                        if(newName && newName !== currentTitle) {
+                            await api.renameList(list.id, newName);
+                        }
+                        await loadLists();
+                        if (currentFilter === 'list' && currentListId === list.id) { viewTitle.innerText = newName; }
+                        loadTasks(); 
+                    };
+                    
+                    input.addEventListener('blur', finishEdit);
+                    input.addEventListener('keydown', (evt) => {
+                        if(evt.key === 'Enter') input.blur();
+                        else if(evt.key === 'Escape') { input.value = currentTitle; input.blur(); }
+                    });
+                });
+
+                const deleteBtn = li.querySelector('.list-delete-btn');
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    
+                    // STAGE 1: Confirm List Deletion
+                    li.innerHTML = `
+                        <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+                            <span style="font-size:0.85rem; color:var(--text-main);">Delete "${escapeHTML(list.name)}"?</span>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn-yes-list" style="flex:1; padding:4px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer;">Yes</button>
+                                <button class="btn-no-list" style="flex:1; padding:4px; background:var(--glass-bg); color:var(--text-main); border:none; border-radius:4px; cursor:pointer;">No</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    li.querySelector('.btn-no-list').addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        loadLists(); // Reset back to normal
+                    });
+                    
+                    li.querySelector('.btn-yes-list').addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        // STAGE 2: Confirm Tasks Cascading
+                        li.innerHTML = `
+                            <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+                                <span style="font-size:0.8rem; color:var(--text-main);">Delete its tasks too?</span>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn-yes-tasks" style="flex:1; padding:4px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer;">Yes</button>
+                                    <button class="btn-no-tasks" style="flex:1; padding:4px; background:var(--glass-bg); color:var(--text-main); border:none; border-radius:4px; cursor:pointer;">No</button>
+                                </div>
+                            </div>
+                        `;
+                        
+                        const executeDelete = async (deleteTasks) => {
+                            await api.deleteList(list.id, deleteTasks);
+                            if(currentFilter === 'list' && currentListId === list.id) {
+                                currentFilter = 'today';
+                                currentListId = null;
+                                viewTitle.innerText = "Today";
+                            }
+                            await loadLists();
+                            loadTasks();
+                        };
+                        
+                        li.querySelector('.btn-yes-tasks').addEventListener('click', (ev2) => { ev2.stopPropagation(); executeDelete(true); });
+                        li.querySelector('.btn-no-tasks').addEventListener('click', (ev2) => { ev2.stopPropagation(); executeDelete(false); });
+                    });
+                });
+                
+                li.addEventListener('click', (e) => {
+                    if(e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
                     filterNavItems.forEach(nav => nav.classList.remove('active'));
-                    listsNav.querySelectorAll('li').forEach(nav => nav.classList.remove('active'));
+                    listsNav.querySelectorAll('.list-item-container').forEach(nav => nav.classList.remove('active'));
                     li.classList.add('active');
                     
                     currentFilter = 'list';
                     currentListId = list.id;
-                    viewTitle.innerText = li.innerText;
+                    viewTitle.innerText = list.name;
                     form.style.display = 'flex';
                     loadTasks();
+                });
+
+                // HTML5 Drag API targets
+                li.addEventListener('dragover', (e) => {
+                    e.preventDefault(); 
+                    li.classList.add('drag-hover');
+                });
+                li.addEventListener('dragleave', () => {
+                    li.classList.remove('drag-hover');
+                });
+                li.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    li.classList.remove('drag-hover');
+                    const taskIdStr = e.dataTransfer.getData('text/plain');
+                    if(!taskIdStr) return;
+                    
+                    const taskId = parseInt(taskIdStr);
+                    const taskDOM = document.querySelector(`.task-item[data-id="${taskId}"]`);
+                    const isCompleted = taskDOM ? taskDOM.classList.contains('completed') : false;
+                    
+                    try {
+                        await api.updateTaskStatus(taskId, isCompleted, null, list.id);
+                        
+                        if (taskDOM && currentFilter === 'list' && currentListId !== list.id) {
+                            taskDOM.classList.add('fade-out');
+                            taskDOM.style.transition = 'all 0.4s ease';
+                            setTimeout(() => taskDOM.remove(), 400); 
+                        } else if (taskDOM) {
+                            const inlineSelect = taskDOM.querySelector('.list-assign-dropdown');
+                            if(inlineSelect) inlineSelect.value = list.id;
+                        }
+                        
+                        li.style.transform = 'scale(1.05)';
+                        setTimeout(() => li.style.transform = '', 200);
+                    } catch(err) { console.error('Drag error', err); }
                 });
                 
                 listsNav.appendChild(li);
             });
-        } catch (err) {
-            console.error('Error loading custom lists', err);
-        }
+        } catch (err) { console.error('Lists API query fail', err); }
     }
 
     async function loadTasks() {
@@ -178,9 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 filteredTasks.forEach(task => addTaskToDOM(task, false, taskList));
             }
-        } catch (err) {
-            console.error('Error loading tasks:', err);
-        }
+        } catch (err) { console.error('Tasks API execution fall', err); }
     }
 
     function addTaskToDOM(task, prepend = false, container) {
@@ -188,6 +363,13 @@ document.addEventListener('DOMContentLoaded', () => {
         li.className = `task-item ${task.completed ? 'completed' : ''}`;
         li.dataset.id = task.id;
         li.style.flexWrap = 'wrap';
+
+        li.setAttribute('draggable', 'true');
+        li.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', task.id);
+            li.classList.add('dragging');
+        });
+        li.addEventListener('dragend', () => { li.classList.remove('dragging'); });
 
         const priorityColorMap = {
             'High': 'rgba(239, 68, 68, 0.6)',
@@ -206,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dateBadge = `<span class="badge date-badge ${isOverdue ? 'overdue' : ''}">Due ${dateStr}</span>`;
         }
         
-        // Inline List Assignment Dropdown
         let listOptions = `<option value="">No List</option>`;
         customListsData.forEach(list => {
             const isSelected = task.list_id === list.id ? 'selected' : '';
@@ -254,7 +435,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const taskContentBody = li.querySelector('.task-text').parentElement.parentElement;
         const listSelect = li.querySelector('.list-assign-dropdown');
         
-        // Inline assignment event
         listSelect.addEventListener('change', async (e) => {
             e.stopPropagation();
             const selectTarget = e.target;
@@ -263,23 +443,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             task.list_id = newListId;
             try {
-                // Submit list_id update explicitly
                 await api.updateTaskStatus(task.id, task.completed, null, newListId !== null ? newListId : '');
-                
-                // If user is inside a mapped view, moving the task to another list should optionally remove it from DOM
                 if (currentFilter === 'list' && currentListId !== newListId) {
                     li.classList.add('fade-out');
                     li.style.transition = 'all 0.4s ease';
                     setTimeout(() => li.remove(), 400);
                 }
             } catch(err) {
-                console.error(err);
                 task.list_id = originalValue;
                 selectTarget.value = originalValue || '';
             }
         });
         
-        // Prevent dropdown click from triggering accordion expand
         listSelect.addEventListener('click', e => e.stopPropagation());
 
         if (task.subtasks && task.subtasks.length > 0) {
@@ -303,7 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = subForm.querySelector('input').value.trim();
             if (!title) return;
             try {
-                // subtasks implicitly inherit parent's list_id natively in our payload logic (or stay null via API flexibility)
                 const newSub = await api.addTask(title, 'None', null, task.id, task.list_id);
                 addTaskToDOM(newSub, false, subtaskListContainer);
                 subForm.querySelector('input').value = '';

@@ -49,5 +49,21 @@ export const api = {
             body: formData
         });
         return await res.json();
+    },
+
+    async renameList(id, name) {
+        const res = await fetch(`/api/lists/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        return await res.json();
+    },
+
+    async deleteList(id, deleteTasks) {
+        const res = await fetch(`/api/lists/${id}?delete_tasks=${deleteTasks}`, {
+            method: 'DELETE'
+        });
+        return await res.json();
     }
 };
