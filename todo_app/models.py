@@ -32,6 +32,13 @@ class Task(db.Model):
     
     # v0.4.3 fields
     archived_at = db.Column(db.DateTime, nullable=True)
+    
+    # v0.5.0 fields (Subtasks)
+    parent_id = db.Column(db.Integer, db.ForeignKey('task.id', name='fk_task_parent_id', ondelete='CASCADE'), nullable=True)
+    subtasks = db.relationship('Task', backref=db.backref('parent', remote_side=[id]), cascade="all, delete-orphan", lazy=True)
+    
+    # v0.6.0 fields (Custom Lists/Categories)
+    list_id = db.Column(db.Integer, db.ForeignKey('todo_list.id', name='fk_task_list_id'), nullable=True)
 
     def to_dict(self):
         return {
@@ -43,5 +50,17 @@ class Task(db.Model):
             'priority': self.priority,
             'due_date': self.due_date.isoformat() if self.due_date else None,
             'archived': self.archived,
-            'archived_at': self.archived_at.isoformat() if self.archived_at else None
+            'archived_at': self.archived_at.isoformat() if self.archived_at else None,
+            'parent_id': self.parent_id,
+            'list_id': self.list_id,
+            'subtasks': [sub.to_dict() for sub in self.subtasks] if self.subtasks else []
         }
+
+class TodoList(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_list_user_id'), nullable=False)
+    tasks = db.relationship('Task', backref='todo_list', lazy=True)
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name}

@@ -42,8 +42,23 @@
                     <li class="active" data-filter="today">☀️ My Day</li>
                     <li data-filter="week">📅 Next 7 Days</li>
                     <li data-filter="all">📋 All My Tasks</li>
-                    <li data-filter="archived" style="margin-top: 20px; color: var(--text-muted);">📦 Archived Tasks</li>
+                    <li data-filter="archived" style="margin-top: 10px; color: var(--text-muted);">📦 Archived Tasks</li>
                 </ul>
+
+                <div class="lists-section" style="margin-top: 30px;">
+                    <div class="lists-header" id="lists-toggle">
+                        <span>MY LISTS</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div id="lists-container" class="lists-container expanded">
+                        <ul id="custom-lists">
+                            <!-- Custom lists will be injected here -->
+                        </ul>
+                        <form id="new-list-form" class="sidebar-form">
+                            <input type="text" placeholder="+ New List" required maxlength="20">
+                        </form>
+                    </div>
+                </div>
             </nav>
 
             <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Sign Out">Logout</a>

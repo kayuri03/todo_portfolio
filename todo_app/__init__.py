@@ -25,9 +25,11 @@ def create_app(config_class=Config):
     from todo_app.routes.auth import auth_bp
     from todo_app.routes.tasks import tasks_bp
     from todo_app.routes.pages import pages_bp
+    from todo_app.routes.lists import lists_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(pages_bp)
+    app.register_blueprint(lists_bp)
 
     return app
