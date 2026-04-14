@@ -1,13 +1,26 @@
 export const api = {
+    async fetchLists() {
+        const res = await fetch('/api/lists');
+        return await res.json();
+    },
+    async addList(name) {
+        const res = await fetch('/api/lists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        return await res.json();
+    },
     async fetchTasks(archived = false, list_id = null) {
         let url = `/api/tasks?archived=${archived}`;
         if (list_id) url += `&list_id=${list_id}`;
         const res = await fetch(url);
         return await res.json();
     },
-    async addTask(title, priority, due_date, parent_id = null) {
+    async addTask(title, priority, due_date, parent_id = null, list_id = null) {
         const payload = { title, priority, due_date };
         if (parent_id) payload.parent_id = parent_id;
+        if (list_id) payload.list_id = list_id;
         const res = await fetch('/api/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -15,17 +28,15 @@ export const api = {
         });
         return await res.json();
     },
-    async updateTask(id, data) {
+    async updateTaskStatus(id, completed, archived = null, list_id = undefined) {
+        const payload = { completed };
+        if (archived !== null) payload.archived = archived;
+        if (list_id !== undefined) payload.list_id = list_id;
         await fetch(`/api/tasks/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify(payload)
         });
-    },
-    async updateTaskStatus(id, completed, archived = null) {
-        const payload = { completed };
-        if (archived !== null) payload.archived = archived;
-        await this.updateTask(id, payload);
     },
     async deleteTask(id) {
         await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
@@ -38,21 +49,5 @@ export const api = {
             body: formData
         });
         return await res.json();
-    },
-    // List operations
-    async fetchLists() {
-        const res = await fetch('/api/lists');
-        return await res.json();
-    },
-    async createList(name) {
-        const res = await fetch('/api/lists', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        });
-        return await res.json();
-    },
-    async deleteList(id) {
-        await fetch(`/api/lists/${id}`, { method: 'DELETE' });
     }
 };

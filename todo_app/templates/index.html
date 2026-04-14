@@ -42,20 +42,20 @@
                     <li class="active" data-filter="today">☀️ My Day</li>
                     <li data-filter="week">📅 Next 7 Days</li>
                     <li data-filter="all">📋 All My Tasks</li>
-                    <li data-filter="archived" style="margin-top: 10px; color: var(--text-muted);">📦 Archived Tasks</li>
+                    <li data-filter="archived" style="margin-top: 20px; color: var(--text-muted);">📦 Archived Tasks</li>
                 </ul>
 
-                <div class="lists-section" style="margin-top: 30px;">
-                    <div class="lists-header" id="lists-toggle">
-                        <span>MY LISTS</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <!-- v0.6.0 Custom Lists -->
+                <div class="sidebar-lists-section" style="margin-top: 30px;">
+                    <div id="lists-header-toggle" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; color: var(--text-muted); padding: 5px 16px; margin-bottom: 5px;">
+                        <span style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">My Lists</span>
+                        <span class="lists-toggle-icon" style="transition: transform 0.2s;">⮟</span>
                     </div>
-                    <div id="lists-container" class="lists-container expanded">
-                        <ul id="custom-lists">
-                            <!-- Custom lists will be injected here -->
+                    <div id="custom-lists-container" style="display:block;">
+                        <ul id="custom-lists-nav" style="list-style:none; display:flex; flex-direction:column; gap:2px;">
                         </ul>
-                        <form id="new-list-form" class="sidebar-form">
-                            <input type="text" placeholder="+ New List" required maxlength="20">
+                        <form id="add-list-form" style="margin-top:10px; display:flex; padding: 0 16px;">
+                            <input type="text" id="new-list-input" placeholder="+ New List" autocomplete="off" required style="width: 100%; border: none; background: transparent; color: var(--text-main); font-size: 0.9rem; outline: none; border-bottom: 1px solid var(--glass-border); padding: 5px 0;">
                         </form>
                     </div>
                 </div>

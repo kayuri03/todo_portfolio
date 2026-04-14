@@ -41,8 +41,9 @@ def add_task():
     due_date_str = data.get('due_date')
     due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00')) if due_date_str else None
     parent_id = data.get('parent_id')
+    list_id = data.get('list_id')
 
-    new_task = Task(title=data['title'], author=current_user, priority=priority, due_date=due_date, parent_id=parent_id)
+    new_task = Task(title=data['title'], author=current_user, priority=priority, due_date=due_date, parent_id=parent_id, list_id=list_id)
     db.session.add(new_task)
     db.session.commit()
     return jsonify(new_task.to_dict()), 201
@@ -71,6 +72,7 @@ def update_task(task_id):
         else:
             task.archived_at = None
     if 'list_id' in data:
+        # Allowing list_id validation (None means removed from a list, dropped to master bucket)
         task.list_id = data['list_id']
         
     db.session.commit()

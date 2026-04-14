@@ -16,6 +16,19 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+class TodoList(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_list_user_id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    tasks = db.relationship('Task', backref='todo_list', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name
+        }
+
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -36,9 +49,9 @@ class Task(db.Model):
     # v0.5.0 fields (Subtasks)
     parent_id = db.Column(db.Integer, db.ForeignKey('task.id', name='fk_task_parent_id', ondelete='CASCADE'), nullable=True)
     subtasks = db.relationship('Task', backref=db.backref('parent', remote_side=[id]), cascade="all, delete-orphan", lazy=True)
-    
-    # v0.6.0 fields (Custom Lists/Categories)
-    list_id = db.Column(db.Integer, db.ForeignKey('todo_list.id', name='fk_task_list_id'), nullable=True)
+
+    # v0.6.0 fields (Custom Lists)
+    list_id = db.Column(db.Integer, db.ForeignKey('todo_list.id', name='fk_task_list_id', ondelete='SET NULL'), nullable=True)
 
     def to_dict(self):
         return {
@@ -55,12 +68,3 @@ class Task(db.Model):
             'list_id': self.list_id,
             'subtasks': [sub.to_dict() for sub in self.subtasks] if self.subtasks else []
         }
-
-class TodoList(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_list_user_id'), nullable=False)
-    tasks = db.relationship('Task', backref='todo_list', lazy=True)
-
-    def to_dict(self):
-        return {'id': self.id, 'name': self.name}

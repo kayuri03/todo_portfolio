@@ -1,73 +1,46 @@
 import { api } from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    const mainForm = document.getElementById('todo-form');
-    const mainInput = document.getElementById('task-input');
+    const form = document.getElementById('todo-form');
+    const input = document.getElementById('task-input');
     const taskList = document.getElementById('task-list');
     
     const filterNavItems = document.querySelectorAll('#filter-nav li');
     const viewTitle = document.getElementById('view-title');
     
-    const listsToggle = document.getElementById('lists-toggle');
-    const listsContainer = document.getElementById('lists-container');
-    const customListsUl = document.getElementById('custom-lists');
-    const newListForm = document.getElementById('new-list-form');
-
     let currentFilter = 'today';
     let currentListId = null;
-    let cachedLists = [];
+    let customListsData = [];
 
-    if(taskList && mainForm) {
-        init();
+    if(taskList && form) {
+        // v0.6.0 Load custom lists before loading tasks
+        loadLists().then(() => loadTasks());
 
-        async function init() {
-            await loadLists();
-            loadTasks();
-        }
-
-        // Sidebar Filter Navigation
+        // Standard Filters Listener
         filterNavItems.forEach(item => {
             item.addEventListener('click', () => {
                 filterNavItems.forEach(nav => nav.classList.remove('active'));
-                document.querySelectorAll('#custom-lists li').forEach(li => li.classList.remove('active'));
+                const listsNav = document.getElementById('custom-lists-nav');
+                if (listsNav) listsNav.querySelectorAll('li').forEach(nav => nav.classList.remove('active'));
                 
                 item.classList.add('active');
                 currentFilter = item.dataset.filter;
                 currentListId = null;
-                
                 viewTitle.innerText = item.innerText.split(' ')[1] ? item.innerText.split(/ (.+)/)[1] : item.innerText;
                 
-                toggleFormVisibility();
+                if (currentFilter === 'archived') {
+                    form.style.display = 'none';
+                } else {
+                    form.style.display = 'flex';
+                }
                 loadTasks();
             });
         });
 
-        // Collapsible Lists Section
-        listsToggle.addEventListener('click', () => {
-            listsToggle.classList.toggle('expanded');
-            listsContainer.classList.toggle('expanded');
-        });
-
-        // Create New List
-        newListForm.addEventListener('submit', async (e) => {
+        // Add task mapping to correct bucket
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const nameInput = newListForm.querySelector('input');
-            const name = nameInput.value.trim();
-            if(!name) return;
-
-            try {
-                const newList = await api.createList(name);
-                nameInput.value = '';
-                await loadLists();
-            } catch (err) {
-                console.error('Error creating list:', err);
-            }
-        });
-
-        // Main Task Submission
-        mainForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const title = mainInput.value.trim();
+            const title = input.value.trim();
             const priorityInput = document.getElementById('task-priority');
             const dateInput = document.getElementById('task-due-date');
             
@@ -75,69 +48,109 @@ document.addEventListener('DOMContentLoaded', () => {
             const due_date = (dateInput && dateInput.value) ? dateInput.value + "T00:00:00Z" : null;
             if (!title) return;
 
+            const targetListId = currentFilter === 'list' ? currentListId : null;
+
             try {
-                const newTask = await api.addTask(title, priority, due_date, null);
-                // If we are in a specific list view, assign it immediately
-                if (currentListId) {
-                    await api.updateTask(newTask.id, { list_id: currentListId });
-                }
+                await api.addTask(title, priority, due_date, null, targetListId);
                 loadTasks();
-                mainInput.value = '';
+                input.value = '';
                 if(priorityInput) priorityInput.value = 'None';
                 if(dateInput) dateInput.value = '';
             } catch (err) {
                 console.error('Error adding task:', err);
             }
         });
-    }
 
-    // Load Lists into Sidebar
-    async function loadLists() {
-        try {
-            cachedLists = await api.fetchLists();
-            customListsUl.innerHTML = '';
-            cachedLists.forEach(list => {
-                const li = document.createElement('li');
-                li.innerText = `# ${list.name}`;
-                li.dataset.id = list.id;
-                if(currentListId == list.id) li.classList.add('active');
-                
-                li.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    filterNavItems.forEach(nav => nav.classList.remove('active'));
-                    document.querySelectorAll('#custom-lists li').forEach(el => el.classList.remove('active'));
-                    
-                    li.classList.add('active');
-                    currentListId = list.id;
-                    currentFilter = 'list';
-                    viewTitle.innerText = list.name;
-                    
-                    toggleFormVisibility();
-                    loadTasks();
-                });
-                customListsUl.appendChild(li);
+        // Custom Lists Add Form
+        const addListForm = document.getElementById('add-list-form');
+        if (addListForm) {
+            addListForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const listInput = document.getElementById('new-list-input');
+                const val = listInput.value.trim();
+                if(!val) return;
+                try {
+                    await api.addList(val);
+                    listInput.value = '';
+                    await loadLists();
+                } catch(e) { console.error(e); }
             });
-        } catch (err) {
-            console.error('Error loading lists:', err);
+        }
+
+        // Custom Lists Accordion
+        const listsHeaderToggle = document.getElementById('lists-header-toggle');
+        const customListsContainer = document.getElementById('custom-lists-container');
+        if (listsHeaderToggle && customListsContainer) {
+            listsHeaderToggle.addEventListener('click', () => {
+                const isHidden = customListsContainer.style.display === 'none';
+                customListsContainer.style.display = isHidden ? 'block' : 'none';
+                listsHeaderToggle.querySelector('.lists-toggle-icon').style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+            });
         }
     }
 
-    function toggleFormVisibility() {
-        if (currentFilter === 'archived') {
-            mainForm.style.display = 'none';
-        } else {
-            mainForm.style.display = 'flex';
+    const avatarUpload = document.getElementById('avatar-upload');
+    if (avatarUpload) {
+        avatarUpload.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                try {
+                    const data = await api.uploadAvatar(file);
+                    if (data.success) {
+                        window.location.reload();
+                    }
+                } catch(err) {
+                    console.error('Upload failed', err);
+                }
+            }
+        });
+    }
+
+    async function loadLists() {
+        const listsNav = document.getElementById('custom-lists-nav');
+        if (!listsNav) return;
+        try {
+            customListsData = await api.fetchLists();
+            listsNav.innerHTML = '';
+            customListsData.forEach(list => {
+                const li = document.createElement('li');
+                li.dataset.filter = 'list';
+                li.dataset.listId = list.id;
+                li.innerText = escapeHTML(list.name);
+                
+                // Maintain active UX if we re-render while currently sitting inside a list filter
+                if (currentFilter === 'list' && currentListId === list.id) {
+                    li.classList.add('active');
+                }
+                
+                li.addEventListener('click', () => {
+                    filterNavItems.forEach(nav => nav.classList.remove('active'));
+                    listsNav.querySelectorAll('li').forEach(nav => nav.classList.remove('active'));
+                    li.classList.add('active');
+                    
+                    currentFilter = 'list';
+                    currentListId = list.id;
+                    viewTitle.innerText = li.innerText;
+                    form.style.display = 'flex';
+                    loadTasks();
+                });
+                
+                listsNav.appendChild(li);
+            });
+        } catch (err) {
+            console.error('Error loading custom lists', err);
         }
     }
 
     async function loadTasks() {
         try {
             const isArchived = currentFilter === 'archived';
-            const tasks = await api.fetchTasks(isArchived, currentListId);
+            const listIdArg = currentFilter === 'list' ? currentListId : null;
+            const tasks = await api.fetchTasks(isArchived, listIdArg);
             taskList.innerHTML = '';
             
             let filteredTasks = tasks;
-            if (!isArchived && !currentListId) {
+            if (!isArchived && currentFilter !== 'list' && currentFilter !== 'all') {
                 const now = new Date();
                 now.setHours(0,0,0,0);
                 
@@ -192,12 +205,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const isOverdue = dateObj < new Date() && !task.completed && currentFilter !== 'archived';
             dateBadge = `<span class="badge date-badge ${isOverdue ? 'overdue' : ''}">Due ${dateStr}</span>`;
         }
-
-        // List Options for Dropdown
+        
+        // Inline List Assignment Dropdown
         let listOptions = `<option value="">No List</option>`;
-        cachedLists.forEach(l => {
-            listOptions += `<option value="${l.id}" ${task.list_id == l.id ? 'selected' : ''}>${l.name}</option>`;
+        customListsData.forEach(list => {
+            const isSelected = task.list_id === list.id ? 'selected' : '';
+            listOptions += `<option value="${list.id}" ${isSelected}>${escapeHTML(list.name)}</option>`;
         });
+        const listDropdownHTML = `<select class="list-assign-dropdown" title="Assign to Custom List" style="margin-left: 4px;">${listOptions}</select>`;
 
         const archiveSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>`;
         const deleteSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
@@ -212,12 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="task-text">${escapeHTML(task.title)}</span>
                             <div class="expand-icon" style="transition: transform 0.2s;">${expandSvg}</div>
                         </div>
-                        <div class="badges-container" style="display:flex; gap:8px; align-items:center;">
+                        <div class="badges-container" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                             ${priorityBadge}
                             ${dateBadge}
-                            <select class="task-list-selector" title="Move to list">
-                                ${listOptions}
-                            </select>
+                            ${listDropdownHTML}
                         </div>
                     </div>
                 </div>
@@ -239,9 +252,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const expandIcon = li.querySelector('.expand-icon');
         const checkbox = li.querySelector('.custom-checkbox');
         const taskContentBody = li.querySelector('.task-text').parentElement.parentElement;
-        const listSelector = li.querySelector('.task-list-selector');
+        const listSelect = li.querySelector('.list-assign-dropdown');
         
-        // Mount Subtasks
+        // Inline assignment event
+        listSelect.addEventListener('change', async (e) => {
+            e.stopPropagation();
+            const selectTarget = e.target;
+            const originalValue = task.list_id;
+            const newListId = selectTarget.value ? parseInt(selectTarget.value) : null;
+            
+            task.list_id = newListId;
+            try {
+                // Submit list_id update explicitly
+                await api.updateTaskStatus(task.id, task.completed, null, newListId !== null ? newListId : '');
+                
+                // If user is inside a mapped view, moving the task to another list should optionally remove it from DOM
+                if (currentFilter === 'list' && currentListId !== newListId) {
+                    li.classList.add('fade-out');
+                    li.style.transition = 'all 0.4s ease';
+                    setTimeout(() => li.remove(), 400);
+                }
+            } catch(err) {
+                console.error(err);
+                task.list_id = originalValue;
+                selectTarget.value = originalValue || '';
+            }
+        });
+        
+        // Prevent dropdown click from triggering accordion expand
+        listSelect.addEventListener('click', e => e.stopPropagation());
+
         if (task.subtasks && task.subtasks.length > 0) {
             task.subtasks.forEach(sub => addTaskToDOM(sub, false, subtaskListContainer));
             expandIcon.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
@@ -249,75 +289,58 @@ document.addEventListener('DOMContentLoaded', () => {
             expandIcon.style.opacity = '0.3';
         }
 
-        // Change List Event
-        listSelector.addEventListener('click', (e) => e.stopPropagation());
-        listSelector.addEventListener('change', async (e) => {
-            const newListId = e.target.value || null;
-            try {
-                await api.updateTask(task.id, { list_id: newListId });
-                // If we are currently filtering by a specific list and we move it out, remove from DOM
-                if (currentListId && currentListId != newListId) {
-                    li.classList.add('fade-out');
-                    setTimeout(() => li.remove(), 400);
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        });
-
-        // Expand/Collapse
         taskContentBody.addEventListener('click', (e) => {
-            if (e.target === checkbox || e.target === listSelector) return;
+            if (e.target === checkbox) return; 
             e.stopPropagation();
             const isExpanded = subtaskContainerNode.style.display === 'block';
             subtaskContainerNode.style.display = isExpanded ? 'none' : 'block';
             expandIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
         });
 
-        // Subtask Form
         const subForm = li.querySelector('.subtask-form');
         subForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const titleInput = subForm.querySelector('input');
-            const title = titleInput.value.trim();
+            const title = subForm.querySelector('input').value.trim();
             if (!title) return;
             try {
-                const newSub = await api.addTask(title, 'None', null, task.id);
+                // subtasks implicitly inherit parent's list_id natively in our payload logic (or stay null via API flexibility)
+                const newSub = await api.addTask(title, 'None', null, task.id, task.list_id);
                 addTaskToDOM(newSub, false, subtaskListContainer);
-                titleInput.value = '';
+                subForm.querySelector('input').value = '';
                 expandIcon.style.opacity = '1';
                 expandIcon.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         });
 
-        // Checkbox Logic (including shake validation)
         checkbox.addEventListener('click', async (e) => {
             e.stopPropagation();
             const isCompleted = li.classList.contains('completed');
             
             if (!isCompleted) {
-                const uncompletedSubs = Array.from(subtaskListContainer.querySelectorAll('.task-item:not(.fade-out):not(.completed)'));
+                const subItemDOMs = Array.from(subtaskListContainer.querySelectorAll('.task-item:not(.fade-out)'));
+                const uncompletedSubs = subItemDOMs.filter(domLi => !domLi.classList.contains('completed'));
+                
                 if (uncompletedSubs.length > 0) {
                     li.classList.remove('shake');
-                    void li.offsetWidth;
+                    void li.offsetWidth; 
                     li.classList.add('shake');
                     
-                    subtaskContainerNode.style.display = 'block';
+                    subtaskContainerNode.style.display = 'block'; 
                     expandIcon.style.transform = 'rotate(180deg)';
                     uncompletedSubs.forEach(child => {
+                        child.classList.remove('highlight-red');
+                        void child.offsetWidth;
                         child.classList.add('highlight-red');
                         setTimeout(() => child.classList.remove('highlight-red'), 1500);
                     });
-                    return;
+                    return; 
                 }
             }
 
             li.classList.toggle('completed');
             checkbox.classList.toggle('checked');
             try {
-                await api.updateTaskStatus(task.id, !isCompleted);
+                await api.updateTaskStatus(task.id, !isCompleted, null, task.list_id);
             } catch (err) {
                 li.classList.toggle('completed');
                 checkbox.classList.toggle('checked');
@@ -327,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
         li.querySelector('.delete-btn').addEventListener('click', async (e) => {
             e.stopPropagation();
             li.classList.add('fade-out');
+            li.style.transition = 'all 0.4s ease';
             setTimeout(() => li.remove(), 400);
             try {
                 if (task.archived) {
@@ -337,25 +361,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) { console.error(err); }
         });
 
-        if (prepend) container.prepend(li);
-        else container.appendChild(li);
+        if (prepend) { container.prepend(li); } 
+        else { container.appendChild(li); }
     }
 
     function escapeHTML(str) {
         const div = document.createElement('div');
         div.innerText = str;
         return div.innerHTML;
-    }
-
-    const avatarUpload = document.getElementById('avatar-upload');
-    if (avatarUpload) {
-        avatarUpload.addEventListener('change', async (e) => {
-            if (e.target.files.length > 0) {
-                try {
-                    const data = await api.uploadAvatar(e.target.files[0]);
-                    if (data.success) window.location.reload();
-                } catch(err) { console.error(err); }
-            }
-        });
     }
 });

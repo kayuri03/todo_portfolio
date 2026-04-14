@@ -341,63 +341,6 @@ header p {
 .sidebar-nav li { padding: 12px 16px; border-radius: 12px; cursor: pointer; transition: background 0.2s; font-weight: 500;}
 .sidebar-nav li:hover { background: rgba(255,255,255,0.05); }
 .sidebar-nav li.active { background: rgba(59, 130, 246, 0.2); border-left: 3px solid var(--accent); }
-
-/* Lists Section Styles */
-.lists-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 16px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.2s;
-}
-.lists-header:hover { color: var(--text-main); }
-.lists-header .chevron { transition: transform 0.3s ease; }
-.lists-container {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.lists-container.expanded { max-height: 500px; }
-.lists-header.expanded .chevron { transform: rotate(180deg); }
-
-.sidebar-form { padding: 8px 16px; }
-.sidebar-form input {
-    width: 100%;
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    outline: none;
-}
-.sidebar-form input::placeholder { color: rgba(255,255,255,0.2); }
-
-/* Task List Selector */
-.task-list-selector {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--glass-border);
-    border-radius: 8px;
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    padding: 2px 8px;
-    cursor: pointer;
-    outline: none;
-    transition: all 0.2s;
-}
-.task-list-selector:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-main);
-}
-.task-list-selector option {
-    background: #1e293b;
-    color: var(--text-main);
-}
-
 .logout-btn { margin-top: auto; display: block; text-align: center; color: var(--text-muted); text-decoration: none; padding-top: 20px; border-top: 1px solid var(--glass-border);}
 .logout-btn:hover { color: #ef4444; }
 
@@ -453,6 +396,33 @@ header p {
     20%, 80% { transform: translate3d(2px, 0, 0); }
     30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
     40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* Custom Lists v0.6.0 */
+#custom-lists-nav li {
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    transition: background 0.2s, color 0.2s;
+}
+#custom-lists-nav li:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+#custom-lists-nav li.active { background: rgba(59, 130, 246, 0.1); color: white; border-left: 3px solid var(--accent); }
+
+.list-assign-dropdown {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    outline: none;
+    cursor: pointer;
+}
+.list-assign-dropdown option {
+    background: #1a202c;
+    color: white;
 }
 
 /* Auth Specific */
