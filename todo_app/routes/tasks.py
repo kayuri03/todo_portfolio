@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from todo_app.models import Task
 from todo_app.extensions import db
 
@@ -9,6 +9,16 @@ tasks_bp = Blueprint('tasks', __name__)
 @tasks_bp.route('/api/tasks', methods=['GET'])
 @login_required
 def get_tasks():
+    # v0.4.3 Lazy Garbage Collection: Purge archived tasks older than 15 days
+    purge_threshold = datetime.now(timezone.utc) - timedelta(days=15)
+    Task.query.filter(
+        Task.user_id == current_user.id,
+        Task.archived == True,
+        Task.archived_at != None,
+        Task.archived_at < purge_threshold
+    ).delete()
+    db.session.commit()
+
     show_archived = request.args.get('archived', 'false').lower() == 'true'
     tasks = Task.query.filter_by(user_id=current_user.id, archived=show_archived).order_by(Task.created_at.desc()).all()
     return jsonify([task.to_dict() for task in tasks])
@@ -49,6 +59,10 @@ def update_task(task_id):
         task.due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00')) if due_date_str else None
     if 'archived' in data:
         task.archived = data['archived']
+        if task.archived:
+            task.archived_at = datetime.now(timezone.utc)
+        else:
+            task.archived_at = None
         
     db.session.commit()
     return jsonify(task.to_dict())

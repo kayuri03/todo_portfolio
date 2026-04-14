@@ -29,6 +29,9 @@ class Task(db.Model):
     
     # v0.4.0 fields
     archived = db.Column(db.Boolean, default=False)
+    
+    # v0.4.3 fields
+    archived_at = db.Column(db.DateTime, nullable=True)
 
     def to_dict(self):
         return {
@@ -39,5 +42,6 @@ class Task(db.Model):
             'user_id': self.user_id,
             'priority': self.priority,
             'due_date': self.due_date.isoformat() if self.due_date else None,
-            'archived': self.archived
+            'archived': self.archived,
+            'archived_at': self.archived_at.isoformat() if self.archived_at else None
         }
