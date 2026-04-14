@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>To-Do Portfolio | Glassmorphism</title>
+    <title>To-Do Portfolio | Dashboard</title>
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,24 +17,61 @@
         <div class="blob blob-2"></div>
     </div>
 
-    <main class="container glass-panel">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; text-align: left;">
-            <div>
-                <h1 style="margin-bottom:0;">My Tasks</h1>
-                <p>Welcome, {{ user.email.split('@')[0] }}</p>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass-panel" style="padding: 20px;">
+            <div class="profile-section">
+                <div class="avatar-container" id="profile-avatar">
+                    {% if user.avatar_url %}
+                        <img src="{{ user.avatar_url }}" class="avatar-img" id="avatar-image-el">
+                    {% else %}
+                        <div class="avatar-initials" id="avatar-initials-el">{{ user.email[0]|upper }}</div>
+                    {% endif %}
+                    <div class="avatar-overlay">
+                        <label for="avatar-upload" style="cursor:pointer; font-size:11px; display:block; width:100%;">Upload</label>
+                        <input type="file" id="avatar-upload" accept="image/*" style="display:none;">
+                    </div>
+                </div>
+                <div class="profile-info">
+                    <span class="profile-name" style="font-weight:600; font-size:1.1rem;">{{ user.email.split('@')[0] }}</span>
+                </div>
             </div>
-            <a href="{{ url_for('auth.logout') }}" style="color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Logout</a>
-        </header>
 
-        <form id="todo-form">
-            <input type="text" id="task-input" placeholder="What needs to be done?" required autocomplete="off">
-            <button type="submit" id="add-btn">Add Task</button>
-        </form>
+            <nav class="sidebar-nav">
+                <ul id="filter-nav">
+                    <li class="active" data-filter="today">☀️ My Day</li>
+                    <li data-filter="week">📅 Next 7 Days</li>
+                    <li data-filter="all">📋 All My Tasks</li>
+                    <li data-filter="archived" style="margin-top: 20px; color: var(--text-muted);">📦 Archived Tasks</li>
+                </ul>
+            </nav>
 
-        <ul id="task-list">
-            <!-- Tasks will be injected here by app.js -->
-        </ul>
-    </main>
+            <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Sign Out">Logout</a>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content glass-panel container" style="max-width:none; margin:0; padding:30px;">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; text-align: left;">
+                <h1 id="view-title" style="margin-bottom:0;">My Day</h1>
+            </header>
+
+            <form id="todo-form">
+                <input type="text" id="task-input" placeholder="What needs to be done?" required autocomplete="off">
+                <input type="date" id="task-due-date" class="date-picker">
+                <select id="task-priority" class="priority-select">
+                    <option value="None">Priority</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+                <button type="submit" id="add-btn">Add</button>
+            </form>
+
+            <ul id="task-list">
+                <!-- Tasks injected here -->
+            </ul>
+        </main>
+    </div>
 
     <script type="module" src="{{ url_for('static', filename='js/tasks.js') }}"></script>
 </body>
