@@ -20,7 +20,13 @@ def get_tasks():
     db.session.commit()
 
     show_archived = request.args.get('archived', 'false').lower() == 'true'
-    tasks = Task.query.filter_by(user_id=current_user.id, archived=show_archived).order_by(Task.created_at.desc()).all()
+    list_id = request.args.get('list_id')
+    
+    query = Task.query.filter_by(user_id=current_user.id, archived=show_archived, parent_id=None)
+    if list_id:
+        query = query.filter_by(list_id=list_id)
+        
+    tasks = query.order_by(Task.created_at.desc()).all()
     return jsonify([task.to_dict() for task in tasks])
 
 @tasks_bp.route('/api/tasks', methods=['POST'])
@@ -34,8 +40,9 @@ def add_task():
     priority = data.get('priority', 'None')
     due_date_str = data.get('due_date')
     due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00')) if due_date_str else None
+    parent_id = data.get('parent_id')
 
-    new_task = Task(title=data['title'], author=current_user, priority=priority, due_date=due_date)
+    new_task = Task(title=data['title'], author=current_user, priority=priority, due_date=due_date, parent_id=parent_id)
     db.session.add(new_task)
     db.session.commit()
     return jsonify(new_task.to_dict()), 201
@@ -63,6 +70,8 @@ def update_task(task_id):
             task.archived_at = datetime.now(timezone.utc)
         else:
             task.archived_at = None
+    if 'list_id' in data:
+        task.list_id = data['list_id']
         
     db.session.commit()
     return jsonify(task.to_dict())

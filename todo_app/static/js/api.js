@@ -1,24 +1,31 @@
 export const api = {
-    async fetchTasks(archived = false) {
-        const res = await fetch(`/api/tasks?archived=${archived}`);
+    async fetchTasks(archived = false, list_id = null) {
+        let url = `/api/tasks?archived=${archived}`;
+        if (list_id) url += `&list_id=${list_id}`;
+        const res = await fetch(url);
         return await res.json();
     },
-    async addTask(title, priority, due_date) {
+    async addTask(title, priority, due_date, parent_id = null) {
+        const payload = { title, priority, due_date };
+        if (parent_id) payload.parent_id = parent_id;
         const res = await fetch('/api/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, priority, due_date })
+            body: JSON.stringify(payload)
         });
         return await res.json();
+    },
+    async updateTask(id, data) {
+        await fetch(`/api/tasks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
     },
     async updateTaskStatus(id, completed, archived = null) {
         const payload = { completed };
         if (archived !== null) payload.archived = archived;
-        await fetch(`/api/tasks/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        await this.updateTask(id, payload);
     },
     async deleteTask(id) {
         await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
@@ -31,5 +38,21 @@ export const api = {
             body: formData
         });
         return await res.json();
+    },
+    // List operations
+    async fetchLists() {
+        const res = await fetch('/api/lists');
+        return await res.json();
+    },
+    async createList(name) {
+        const res = await fetch('/api/lists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        return await res.json();
+    },
+    async deleteList(id) {
+        await fetch(`/api/lists/${id}`, { method: 'DELETE' });
     }
 };
