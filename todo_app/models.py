@@ -53,6 +53,9 @@ class Task(db.Model):
     # v0.6.0 fields (Custom Lists)
     list_id = db.Column(db.Integer, db.ForeignKey('todo_list.id', name='fk_task_list_id', ondelete='SET NULL'), nullable=True)
 
+    # v0.8.0 fields (Kanban Board)
+    status = db.Column(db.String(50), default='todo')
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -66,5 +69,6 @@ class Task(db.Model):
             'archived_at': self.archived_at.isoformat() if self.archived_at else None,
             'parent_id': self.parent_id,
             'list_id': self.list_id,
+            'status': self.status,
             'subtasks': [sub.to_dict() for sub in self.subtasks] if self.subtasks else []
         }

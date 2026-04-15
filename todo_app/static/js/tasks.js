@@ -11,9 +11,88 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'today';
     let currentListId = null;
     let customListsData = [];
+    let currentViewMode = 'list';
+
+    const toggleListView = document.getElementById('toggle-list-view');
+    const toggleBoardView = document.getElementById('toggle-board-view');
+    const kanbanBoard = document.getElementById('kanban-board');
+    const kanbanColumns = document.querySelectorAll('.kanban-column');
 
     if(taskList && form) {
+        if (toggleListView && toggleBoardView) {
+            const applyView = (mode) => {
+                currentViewMode = mode;
+                if(mode === 'list') {
+                    toggleListView.classList.add('active');
+                    toggleListView.style.background = 'rgba(59, 130, 246, 0.5)';
+                    toggleListView.style.color = 'white';
+                    toggleBoardView.classList.remove('active');
+                    toggleBoardView.style.background = 'transparent';
+                    toggleBoardView.style.color = 'var(--text-muted)';
+                    taskList.style.display = 'block';
+                    kanbanBoard.style.display = 'none';
+                } else {
+                    toggleBoardView.classList.add('active');
+                    toggleBoardView.style.background = 'rgba(59, 130, 246, 0.5)';
+                    toggleBoardView.style.color = 'white';
+                    toggleListView.classList.remove('active');
+                    toggleListView.style.background = 'transparent';
+                    toggleListView.style.color = 'var(--text-muted)';
+                    taskList.style.display = 'none';
+                    kanbanBoard.style.display = 'flex';
+                }
+                loadTasks();
+            };
+            toggleListView.addEventListener('click', () => applyView('list'));
+            toggleBoardView.addEventListener('click', () => applyView('board'));
+
+            kanbanColumns.forEach(column => {
+                column.addEventListener('dragover', e => { e.preventDefault(); column.classList.add('drag-zone-active'); });
+                column.addEventListener('dragleave', e => { e.preventDefault(); column.classList.remove('drag-zone-active'); });
+                column.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    column.classList.remove('drag-zone-active');
+                    const taskId = e.dataTransfer.getData('text/plain');
+                    if (!taskId) return;
+                    const newStatus = column.dataset.status;
+                    const activeLi = document.querySelector(`.task-item[data-id="${taskId}"]`);
+                    if (activeLi) {
+                        column.querySelector('.kanban-task-list').appendChild(activeLi);
+                        try {
+                            const isCompleted = activeLi.classList.contains('completed');
+                            await api.updateTaskStatus(taskId, isCompleted, null, undefined, newStatus);
+                        } catch(err) { console.error('Kanban Sync failed', err); }
+                    }
+                });
+            });
+        }
+
         loadLists().then(() => loadTasks());
+
+        const triggerAddTaskBtn = document.getElementById('trigger-add-task');
+        const cancelAddTaskBtn = document.getElementById('cancel-add-btn');
+
+        const resetTaskFormUI = () => {
+            form.style.display = 'none';
+            if (triggerAddTaskBtn) triggerAddTaskBtn.style.display = 'flex';
+            input.value = '';
+            const priorityInput = document.getElementById('task-priority');
+            const dateInput = document.getElementById('task-due-date');
+            if(priorityInput) priorityInput.value = 'None';
+            if(dateInput) dateInput.value = '';
+        };
+
+        if (triggerAddTaskBtn && cancelAddTaskBtn) {
+            triggerAddTaskBtn.addEventListener('click', () => {
+                triggerAddTaskBtn.style.display = 'none';
+                form.style.display = 'flex';
+                input.focus();
+            });
+            cancelAddTaskBtn.addEventListener('click', resetTaskFormUI);
+            input.addEventListener('keydown', (e) => {
+                if(e.key === 'Escape') resetTaskFormUI();
+            });
+        }
 
         filterNavItems.forEach(item => {
             item.addEventListener('click', () => {
@@ -26,7 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentListId = null;
                 viewTitle.innerText = item.innerText.split(' ')[1] ? item.innerText.split(/ (.+)/)[1] : item.innerText;
                 
-                form.style.display = currentFilter === 'archived' ? 'none' : 'flex';
+                const isArchived = currentFilter === 'archived';
+                if(triggerAddTaskBtn) triggerAddTaskBtn.style.display = isArchived ? 'none' : 'flex';
+                form.style.display = 'none';
                 loadTasks();
             });
         });
@@ -46,9 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await api.addTask(title, priority, due_date, null, targetListId);
                 loadTasks();
-                input.value = '';
-                if(priorityInput) priorityInput.value = 'None';
-                if(dateInput) dateInput.value = '';
+                resetTaskFormUI();
             } catch (err) { console.error('Error adding task:', err); }
         });
 
@@ -352,8 +431,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (filteredTasks.length === 0) {
                 taskList.innerHTML = `<p style="color: var(--text-muted); text-align: center; margin-top: 20px;">No tasks found.</p>`;
+                if(kanbanColumns) kanbanColumns.forEach(col => col.querySelector('.kanban-task-list').innerHTML = '');
             } else {
-                filteredTasks.forEach(task => addTaskToDOM(task, false, taskList));
+                if(currentViewMode === 'list') {
+                    filteredTasks.forEach(task => addTaskToDOM(task, false, taskList));
+                } else {
+                    if(kanbanColumns) kanbanColumns.forEach(col => col.querySelector('.kanban-task-list').innerHTML = '');
+                    filteredTasks.forEach(task => {
+                        const s = task.status || 'todo';
+                        let targetCol = document.querySelector(`.kanban-column[data-status="${s}"] .kanban-task-list`);
+                        if(!targetCol) targetCol = document.querySelector(`.kanban-column[data-status="todo"] .kanban-task-list`);
+                        addTaskToDOM(task, false, targetCol);
+                    });
+                }
             }
         } catch (err) { console.error('Tasks API execution fall', err); }
     }

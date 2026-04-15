@@ -28,10 +28,11 @@ export const api = {
         });
         return await res.json();
     },
-    async updateTaskStatus(id, completed, archived = null, list_id = undefined) {
+    async updateTaskStatus(id, completed, archived = null, list_id = undefined, status = undefined) {
         const payload = { completed };
         if (archived !== null) payload.archived = archived;
         if (list_id !== undefined) payload.list_id = list_id;
+        if (status !== undefined) payload.status = status;
         await fetch(`/api/tasks/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

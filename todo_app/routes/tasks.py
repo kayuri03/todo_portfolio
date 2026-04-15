@@ -74,6 +74,8 @@ def update_task(task_id):
     if 'list_id' in data:
         # Allowing list_id validation (None means removed from a list, dropped to master bucket)
         task.list_id = data['list_id']
+    if 'status' in data:
+        task.status = data['status']
         
     db.session.commit()
     return jsonify(task.to_dict())

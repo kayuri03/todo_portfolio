@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Main Styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}?v=3.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}?v=4.0">
 </head>
 <body>
     <div class="background-blobs">
@@ -71,12 +71,28 @@
         </aside>
 
         <!-- Main Workspace -->
-        <main class="main-content glass-panel container" style="max-width:none; margin:0; padding:30px;">
+        <main class="main-content glass-panel">
             <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; text-align: left;">
                 <h1 id="view-title" style="margin-bottom:0;">My Day</h1>
+                <div class="view-toggle" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
+                    <button id="toggle-list-view" class="view-btn active" style="padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; color: white; background: rgba(59, 130, 246, 0.5); transition: all 0.2s;">☰ List</button>
+                    <button id="toggle-board-view" class="view-btn" style="padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.2s;">◫ Board</button>
+                </div>
             </header>
 
-            <form id="todo-form">
+            <!-- Interactive Trigger -->
+            <div id="trigger-add-task" class="add-task-trigger">
+                <span class="add-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </span>
+                <span style="font-weight: 500;">Add Task</span>
+            </div>
+
+            <!-- Dynamic Input Form -->
+            <form id="todo-form" style="display: none;">
                 <input type="text" id="task-input" placeholder="What needs to be done?" required autocomplete="off">
                 <input type="date" id="task-due-date" class="date-picker">
                 <select id="task-priority" class="priority-select">
@@ -85,15 +101,33 @@
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
                 </select>
-                <button type="submit" id="add-btn">Add</button>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" id="cancel-add-btn" class="secondary-btn">Cancel</button>
+                    <button type="submit" id="add-btn">Add</button>
+                </div>
             </form>
 
             <ul id="task-list">
                 <!-- Tasks injected here -->
             </ul>
+
+            <div id="kanban-board" class="kanban-container" style="display: none;">
+                <div class="kanban-column" data-status="todo">
+                    <div class="kanban-header">To Do</div>
+                    <ul class="kanban-task-list"></ul>
+                </div>
+                <div class="kanban-column" data-status="in-progress">
+                    <div class="kanban-header">In Progress</div>
+                    <ul class="kanban-task-list"></ul>
+                </div>
+                <div class="kanban-column" data-status="done">
+                    <div class="kanban-header">Done</div>
+                    <ul class="kanban-task-list"></ul>
+                </div>
+            </div>
         </main>
     </div>
 
-    <script type="module" src="{{ url_for('static', filename='js/tasks.js') }}?v=3.0"></script>
+    <script type="module" src="{{ url_for('static', filename='js/tasks.js') }}?v=4.0"></script>
 </body>
 </html>
